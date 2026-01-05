@@ -27,7 +27,7 @@
 
     - name: Ensure central report dir exists on controller
       delegate_to: localhost
-      become: true
+      #become: true
       run_once: true
       ansible.builtin.file:
         path: "{{ central_report_dir }}"
