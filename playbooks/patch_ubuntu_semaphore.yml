@@ -1,0 +1,124 @@
+---
+- name: Ubuntu patching + logging + central report (Semaphore)
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Ensure target log directory exists
+      ansible.builtin.file:
+        path: "{{ patch_log_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Write patch start marker on target
+      ansible.builtin.lineinfile:
+        path: "{{ patch_log_file }}"
+        create: true
+        mode: "0640"
+        line: >-
+          {{ ansible_date_time.iso8601 }} host={{ inventory_hostname }}
+          action=patch_start user={{ ansible_user | default('unknown') }}
+          os="{{ ansible_distribution }} {{ ansible_distribution_version }}"
+          kernel={{ ansible_kernel }}
+
+    - name: Ensure central report dir exists on controller
+      delegate_to: localhost
+      become: true
+      run_once: true
+      ansible.builtin.file:
+        path: "{{ central_report_dir }}"
+        state: directory
+        mode: "0750"
+
+    - name: Create CSV header if file not exists (controller)
+      delegate_to: localhost
+      become: true
+      run_once: true
+      ansible.builtin.shell: |
+        if [ ! -f "{{ central_report_file }}" ]; then
+          echo "host,timestamp,os,kernel,changed_upgrade,reboot_required,reboot_done,job_id" > "{{ central_report_file }}"
+          chmod 0640 "{{ central_report_file }}"
+        fi
+      args:
+        executable: /bin/bash
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      register: apt_update
+
+    - name: Upgrade packages
+      ansible.builtin.apt:
+        upgrade: "{{ apt_upgrade_type }}"
+      register: apt_upgrade
+
+    - name: Autoremove unused packages
+      ansible.builtin.apt:
+        autoremove: true
+      when: apt_autoremove | bool
+      register: apt_autoremove_res
+
+    - name: Clean apt cache
+      ansible.builtin.apt:
+        autoclean: true
+      when: apt_clean | bool
+      register: apt_clean_res
+
+    - name: Check reboot required flag
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Reboot if required and allowed
+      ansible.builtin.reboot:
+        msg: "Reboot triggered by Semaphore/Ansible patching"
+        reboot_timeout: "{{ reboot_timeout_sec }}"
+        pre_reboot_delay: 5
+        post_reboot_delay: 10
+        test_command: "whoami"
+      when:
+        - allow_reboot | bool
+        - reboot_required.stat.exists
+      register: reboot_action
+
+  post_tasks:
+    - name: Compute reboot_done boolean
+      ansible.builtin.set_fact:
+        reboot_done: "{{ (allow_reboot | bool) and (reboot_required.stat.exists | default(false)) and (reboot_action is defined) }}"
+
+    - name: Write patch end marker on target
+      ansible.builtin.lineinfile:
+        path: "{{ patch_log_file }}"
+        create: true
+        mode: "0640"
+        line: >-
+          {{ ansible_date_time.iso8601 }} host={{ inventory_hostname }}
+          action=patch_end
+          changed_upgrade={{ apt_upgrade.changed | default(false) }}
+          reboot_required={{ reboot_required.stat.exists | default(false) }}
+          reboot_done={{ reboot_done }}
+          ok=true
+
+    - name: Append CSV line (controller)
+      delegate_to: localhost
+      become: true
+      ansible.builtin.lineinfile:
+        path: "{{ central_report_file }}"
+        create: true
+        mode: "0640"
+        insertafter: EOF
+        line: >-
+          {{ inventory_hostname }},
+          {{ ansible_date_time.iso8601 }},
+          {{ ansible_distribution }} {{ ansible_distribution_version }},
+          {{ ansible_kernel }},
+          {{ apt_upgrade.changed | default(false) }},
+          {{ reboot_required.stat.exists | default(false) }},
+          {{ reboot_done }},
+          {{ lookup('env','SEMAPHORE_TASK_ID') | default('na') }}
+

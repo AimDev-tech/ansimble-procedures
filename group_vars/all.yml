@@ -1,0 +1,14 @@
+---
+patch_log_dir: /var/log/ansible
+patch_log_file: "{{ patch_log_dir }}/patching.log"
+
+central_report_dir: "/opt/semaphore/reports"
+central_report_file: "{{ central_report_dir }}/patch_report_{{ lookup('pipe','date +%F_%H-%M-%S') }}.csv"
+
+allow_reboot: true
+reboot_timeout_sec: 900
+
+apt_upgrade_type: dist
+apt_autoremove: true
+apt_clean: true
+
