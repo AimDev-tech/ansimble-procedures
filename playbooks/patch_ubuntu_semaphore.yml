@@ -27,7 +27,7 @@
 
     - name: Ensure central report dir exists on controller
       delegate_to: localhost
-      #become: true
+      become: true
       run_once: true
       ansible.builtin.file:
         path: "{{ central_report_dir }}"
@@ -36,7 +36,7 @@
 
     - name: Create CSV header if file not exists (controller)
       delegate_to: localhost
-      #become: true
+      become: true
       run_once: true
       ansible.builtin.shell: |
         if [ ! -f "{{ central_report_file }}" ]; then
@@ -107,7 +107,7 @@
 
     - name: Append CSV line (controller)
       delegate_to: localhost
-      #become: true
+      become: true
       ansible.builtin.lineinfile:
         path: "{{ central_report_file }}"
         create: true
