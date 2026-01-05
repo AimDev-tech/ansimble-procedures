@@ -1,3 +1,10 @@
+---
+- name: Patch Ubuntu (update + upgrade) with logging and optional reboot
+  hosts: all
+  become: true
+  gather_facts: true
+ 
+ 
  pre_tasks:
     - name: Ensure log directory exists on controller
       file:
