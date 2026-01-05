@@ -65,3 +65,70 @@
           finished={{ lookup('pipe','date -Is') }}
       delegate_to: localhost
       become: false
+ pre_tasks:
+    - name: Ensure log directory exists on controller
+      file:
+        path: "{{ patch_log_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      become: false
+      run_once: false
+
+    - name: Start log header (controller)
+      copy:
+        dest: "{{ patch_log_file }}"
+        content: |
+          === Patch start ===
+          Host: {{ inventory_hostname }}
+          Date: {{ ansible_date_time.iso8601 }}
+      delegate_to: localhost
+      become: false
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      register: apt_update
+
+    - name: Upgrade packages
+      apt:
+        upgrade: "{{ apt_upgrade_type }}"
+      register: apt_upgrade
+
+    - name: Autoremove unused packages
+      apt:
+        autoremove: true
+      when: autoremove
+
+    - name: Autoclean apt cache
+      apt:
+        autoclean: true
+      when: autoclean
+
+    - name: Check if reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Reboot if required
+      reboot:
+        msg: "Reboot initiated by Ansible after patching"
+        reboot_timeout: "{{ reboot_timeout_seconds }}"
+      when:
+        - reboot_if_required
+        - reboot_required.stat.exists
+
+  post_tasks:
+    - name: Append results to log (controller)
+      lineinfile:
+        path: "{{ patch_log_file }}"
+        create: true
+        line: >-
+          update_cache_changed={{ apt_update.changed | default('n/a') }}
+          upgrade_changed={{ apt_upgrade.changed | default('n/a') }}
+          reboot_required={{ reboot_required.stat.exists | default(false) }}
+          finished={{ lookup('pipe','date -Is') }}
+      delegate_to: localhost
+      become: false
