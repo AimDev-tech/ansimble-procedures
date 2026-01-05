@@ -107,7 +107,7 @@
 
     - name: Append CSV line (controller)
       delegate_to: localhost
-      become: true
+      #become: true
       ansible.builtin.lineinfile:
         path: "{{ central_report_file }}"
         create: true
