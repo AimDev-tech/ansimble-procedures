@@ -2,6 +2,7 @@
 - name: Ubuntu patching + logging + central report (Semaphore)
   hosts: all
   become: true
+  become_method: sudo
   gather_facts: true
 
   pre_tasks:
