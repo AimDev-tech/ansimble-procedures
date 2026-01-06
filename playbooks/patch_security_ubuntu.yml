@@ -3,10 +3,8 @@
   hosts: all
   become: true
   become_method: sudo
-
-  vars:
-    noninteractive_env:
-      DEBIAN_FRONTEND: noninteractive
+  environment:
+    DEBIAN_FRONTEND: noninteractive
 
   pre_tasks:
     - name: Verifica che l'host sia Ubuntu
