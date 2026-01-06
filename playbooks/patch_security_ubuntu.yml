@@ -21,7 +21,7 @@
 
     - name: Aggiorna cache APT
       become: true
-      become_method: enable
+      become_method: sudo
       apt:
         update_cache: yes
         cache_valid_time: 3600
