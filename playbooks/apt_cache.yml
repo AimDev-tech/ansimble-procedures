@@ -1,7 +1,7 @@
 ---
 - name: Gestione Cache APT
   hosts: all
-  become: true  # Necessario per i privilegi di root
+  #become: true  # Necessario per i privilegi di root
   vars:
     # Definizione dell'ambiente non interattivo per evitare blocchi
     noninteractive_env:
@@ -14,7 +14,7 @@
         # Opzionale: aggiorna solo se l'ultimo update è più vecchio di 1 ora (3600s)
         cache_valid_time: 3600
       environment: "{{ noninteractive_env }}"
-      register: apt_result
+      #register: apt_result
 
     - name: Mostra il risultato dell'aggiornamento
       ansible.builtin.debug:
