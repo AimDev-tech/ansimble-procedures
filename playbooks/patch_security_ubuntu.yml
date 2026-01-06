@@ -1,0 +1,127 @@
+---
+- name: Patching sicurezza Ubuntu con log locale sul controller
+  hosts: ubuntu_servers
+  become: true
+
+ # vars:
+    # File di log LOCALE (sul controller Ansible)
+ #   local_log_dir: "logs"
+  #  local_log_path: "logs/ansible-security-updates.log"
+  #  apt_dpkg_opts:
+  #    - "force-confdef"
+    # Per evitare prompt interattivi di APT
+  #  noninteractive_env:
+  #    DEBIAN_FRONTEND: noninteractive
+
+  pre_tasks:
+    - name: Verifica che l'host sia Ubuntu
+      assert:
+        that:
+          - ansible_facts['os_family'] == "Debian"
+          - ansible_facts['distribution'] == "Ubuntu"
+        fail_msg: "Questo playbook è solo per Ubuntu."
+
+    - name: Ping veloce
+      ping:
+
+  tasks:
+
+    - name: Aggiorna cache APT
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      environment: "{{ noninteractive_env }}"
+
+    - name: Mostra pacchetti aggiornabili (dry-run)
+      command: apt-get -s -o Dpkg::Options::=--{{ apt_dpkg_opts | join(' --') }} dist-upgrade
+      register: apt_simulate
+      changed_when: false
+      environment: "{{ noninteractive_env }}"
+
+    - name: Log elenco pacchetti aggiornabili
+      debug:
+        msg: "{{ apt_simulate.stdout_lines | select('match','^Inst ') | list }}"
+
+    - name: apt upgrade (safe)
+      ansible.builtin.apt:
+        upgrade: yes
+
+
+    - name: Autoremove pacchetti non più necessari e Autoclean
+      ansible.builtin.apt:
+        autoremove: yes
+        autoclean: yes
+
+
+
+    - name: Controlla se è richiesto reboot
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+
+    - name: Riavvia se necessario
+      reboot:
+        reboot_timeout: 900
+        test_command: "whoami"
+      when: reboot_required_file.stat.exists
+
+
+
+    - name: Attendi che l'host torni su
+      wait_for_connection:
+        timeout: 300
+
+
+    - name: Verifica versione kernel dopo reboot
+      command: uname -r
+      register: kernel_after
+      changed_when: false
+
+
+    - name: Mostra kernel corrente
+      debug:
+        var: kernel_after.stdout
+
+
+
+    - name: Prepara entry di log (per questo host)
+      set_fact:
+        security_update_log_entry: |
+          {{ ansible_date_time.iso8601 }};{{ inventory_hostname }};
+          apt_update_changed={{ apt_update.changed | default(false) }};
+          apt_upgrade_changed={{ apt_upgrade.changed | default(false) }};
+          reboot_required={{ reboot_required_file.stat.exists | default(false) }};
+          rc={{ apt_upgrade.rc | default(0) }}
+
+    # Da qui in giù SIAMO sul controller (localhost)
+
+    - name: Crea directory log locale se non esiste
+      delegate_to: localhost
+      run_once: true
+      file:
+        path: "{{ local_log_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Scrivi entry di log sul file locale
+      delegate_to: localhost
+      lineinfile:
+        path: "{{ local_log_path }}"
+        line: "{{ security_update_log_entry | replace('\n', ' ') }}"
+        create: yes
+        mode: "0644"
+        insertafter: EOF
+
+  post_tasks:
+    - name: Report finale per host (a schermo)
+      debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Update eseguito: {{ apt_upgrade.changed | default(false) }}"
+          - "Reboot richiesto: {{ reboot_required_file.stat.exists | default(false) }}"
+    - name: Report finale (host per host)
+      debug:
+        msg:
+          #- "Sistema aggiornato: {{ changed_when }}"
+          - "Reboot richiesto: {{ reboot_required_file.stat.exists | default(false) }}"
