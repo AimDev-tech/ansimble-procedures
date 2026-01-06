@@ -4,15 +4,15 @@
   become: true
   become_method: sudo
 
- # vars:
+  vars:
     # File di log LOCALE (sul controller Ansible)
  #   local_log_dir: "logs"
   #  local_log_path: "logs/ansible-security-updates.log"
   #  apt_dpkg_opts:
   #    - "force-confdef"
     # Per evitare prompt interattivi di APT
-  #  noninteractive_env:
-  #    DEBIAN_FRONTEND: noninteractive
+    noninteractive_env:
+      DEBIAN_FRONTEND: noninteractive
 
   pre_tasks:
     - name: Verifica che l'host sia Ubuntu
