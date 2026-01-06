@@ -1,0 +1,22 @@
+---
+- name: Gestione Cache APT
+  hosts: all
+  become: true  # Necessario per i privilegi di root
+  vars:
+    # Definizione dell'ambiente non interattivo per evitare blocchi
+    noninteractive_env:
+      DEBIAN_FRONTEND: noninteractive
+
+  tasks:
+    - name: Aggiorna la cache dei repository (apt-get update)
+      ansible.builtin.apt:
+        update_cache: yes
+        # Opzionale: aggiorna solo se l'ultimo update è più vecchio di 1 ora (3600s)
+        cache_valid_time: 3600
+      environment: "{{ noninteractive_env }}"
+      register: apt_result
+
+    - name: Mostra il risultato dell'aggiornamento
+      ansible.builtin.debug:
+        msg: "La cache è stata aggiornata correttamente!"
+      when: apt_result.changed
