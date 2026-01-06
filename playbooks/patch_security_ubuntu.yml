@@ -5,7 +5,7 @@
   become_method: sudo
   
   vars:
-   environment:
+   noninteractive_env:
      DEBIAN_FRONTEND: noninteractive
 
   pre_tasks:
