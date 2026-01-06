@@ -1,6 +1,6 @@
 ---
 - name: Patching sicurezza Ubuntu con log locale sul controller
-  hosts: ubuntu_servers
+  #hosts: ubuntu_servers
   become: true
 
  # vars:
