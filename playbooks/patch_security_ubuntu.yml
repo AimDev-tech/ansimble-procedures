@@ -32,7 +32,7 @@
       apt:
         update_cache: yes
         cache_valid_time: 3600
-      environment: "{{ noninteractive_env }}"
+      environment: "DEBIAN_FRONTEND: noninteractive"
 
     - name: Mostra pacchetti aggiornabili (dry-run)
       command: apt-get -s -o Dpkg::Options::=--{{ apt_dpkg_opts | join(' --') }} dist-upgrade
