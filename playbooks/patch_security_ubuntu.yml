@@ -7,7 +7,7 @@
   vars:
     # Log sul controller Ansible (macchina da cui lanci ansible-playbook)
     local_log_dir: "logs"
-    local_log_file: "/root/logs/ansible-patch.log"
+    local_log_file: "/tmp/logs/ansible-patch.log"
 
     # APT non interattivo
     noninteractive_env:
