@@ -15,7 +15,7 @@
   command: uname -a
   register: kernel_before
 
- - name: Apply security updates
+- name: Apply security updates
   apt:
     upgrade: dist
     autoremove: yes
@@ -28,7 +28,7 @@
     reboot_timeout: 600
   when: ansible_facts.reboot_required | default(false)
 
-trasforma - name: Write local patch log
+- name: Write local patch log
   copy:
     content: |
       Host: {{ inventory_hostname }}
