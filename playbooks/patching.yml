@@ -45,5 +45,5 @@ trasforma - name: Write local patch log
 
 - name: Generate ISO patch report
   template:
-    src: patch_report.j2
+    src: ../templates/patch_report.j2
     dest: "{{ report_dir }}/patch_{{ inventory_hostname }}_{{ ansible_date_time.date }}.txt"
