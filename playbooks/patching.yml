@@ -1,1 +1,49 @@
+- name: ISO 27001 – Secure Patching Procedure
+  hosts: all
+  become: true
+  gather_facts: true
 
+  roles:
+    - patching
+
+- name: Check pending updates
+  apt:
+    update_cache: yes
+  register: apt_update
+
+- name: Capture system state
+  command: uname -a
+  register: kernel_before
+
+ - name: Apply security updates
+  apt:
+    upgrade: dist
+    autoremove: yes
+    autoclean: yes
+  register: patch_result 
+
+- name: Reboot if required
+  reboot:
+    msg: "Reboot after security patching"
+    reboot_timeout: 600
+  when: ansible_facts.reboot_required | default(false)
+
+trasforma - name: Write local patch log
+  copy:
+    content: |
+      Host: {{ inventory_hostname }}
+      Date: {{ ansible_date_time.iso8601 }}
+      Kernel before: {{ kernel_before.stdout }}
+      Changes: {{ patch_result.changed }}
+    dest: "{{ patch_log_dir }}/{{ inventory_hostname }}.log"
+
+- name: Centralize log
+  fetch:
+    src: "{{ patch_log_dir }}/{{ inventory_hostname }}.log"
+    dest: "{{ central_log_dir }}/"
+    flat: yes
+
+- name: Generate ISO patch report
+  template:
+    src: patch_report.j2
+    dest: "{{ report_dir }}/patch_{{ inventory_hostname }}_{{ ansible_date_time.date }}.txt"
