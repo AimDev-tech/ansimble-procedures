@@ -3,9 +3,6 @@
   become: true
   gather_facts: true
 
-  roles:
-    - patching
-
 - name: Check pending updates
   apt:
     update_cache: yes
