@@ -1,0 +1,8 @@
+Procedura: {{ procedure_id }}
+Data: {{ ansible_date_time.date }}
+
+Host: {{ inventory_hostname }}
+Aggiornamenti applicati: {{ patch_result.changed }}
+Kernel precedente: {{ kernel_before.stdout }}
+
+Responsabile: {{ owner }}
