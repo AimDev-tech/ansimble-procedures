@@ -1,5 +1,5 @@
 - name: ISO 27001 – Secure Patching Procedure
-  hosts: all
+  hosts: ubuntu_servers
   become: true
   gather_facts: true
 
