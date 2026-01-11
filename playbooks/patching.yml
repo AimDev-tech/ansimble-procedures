@@ -1,46 +1,69 @@
-- name: ISO 27001 – Secure Patching Procedure
-  hosts: ubuntu_servers
+---
+- name: ISO27001 - Patching + Logging + Central Report
+  hosts: all
   become: true
   gather_facts: true
 
-- name: Check pending updates
-  apt:
-    update_cache: yes
-  register: apt_update
+  vars:
+    # === ISO / governance metadata (audit) ===
+    iso:
+      procedure_id: "PROC-IT-SEC-004"
+      owner: "Responsabile IT"
+      approved_by: "Direzione"
+      retention_days: 365
 
-- name: Capture system state
-  command: uname -a
-  register: kernel_before
+    # === Paths ===
+    patch_log_dir: "/var/log/ansible/patching"         # LOCAL on targets (watched by Wazuh agent)
+    central_log_dir: "/srv/ansible-central-logs"       # on controller (localhost)
+    report_dir: "/srv/ansible-reports"                 # on controller (localhost)
 
-- name: Apply security updates
-  apt:
-    upgrade: dist
-    autoremove: yes
-    autoclean: yes
-  register: patch_result 
+    # === Behavior ===
+    patch_only_security: true          # if true, try security-only where possible (best-effort)
+    allow_reboot: true
+    reboot_timeout: 900
+    apt_update_cache_valid_time: 3600  # seconds
+    win_updates_enabled: false         # set true if you want Windows patching
 
-- name: Reboot if required
-  reboot:
-    msg: "Reboot after security patching"
-    reboot_timeout: 600
-  when: ansible_facts.reboot_required | default(false)
+  pre_tasks:
+    - name: Ensure local patch log dir exists on targets
+      file:
+        path: "{{ patch_log_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
 
-- name: Write local patch log
-  copy:
-    content: |
-      Host: {{ inventory_hostname }}
-      Date: {{ ansible_date_time.iso8601 }}
-      Kernel before: {{ kernel_before.stdout }}
-      Changes: {{ patch_result.changed }}
-    dest: "{{ patch_log_dir }}/{{ inventory_hostname }}.log"
+    - name: Capture pre-state (kernel, uptime, packages) - kernel
+      command: uname -a
+      register: kernel_before
+      changed_when: false
 
-- name: Centralize log
-  fetch:
-    src: "{{ patch_log_dir }}/{{ inventory_hostname }}.log"
-    dest: "{{ central_log_dir }}/"
-    flat: yes
+    - name: Capture pre-state - uptime
+      command: uptime -p
+      register: uptime_before
+      changed_when: false
 
-- name: Generate ISO patch report
-  template:
-    src: ../templates/patch_report.j2
-    dest: "{{ report_dir }}/patch_{{ inventory_hostname }}_{{ ansible_date_time.date }}.txt"
+    - name: Capture pre-state - OS release
+      debug:
+        msg:
+          os_family: "{{ ansible_os_family }}"
+          distribution: "{{ ansible_distribution }}"
+          version: "{{ ansible_distribution_version }}"
+      changed_when: false
+
+  tasks:
+    # =========================
+    # Debian/Ubuntu patching
+    # =========================
+    - name: Debian/Ubuntu - update cache
+      apt:
+        update_cache: true
+        cache_valid_time: "{{ apt_update_cache_valid_time }}"
+      when: ansible_os_family == "Debian"
+      register: apt_cache
+
+    # Best-effort security-only: not perfect across all repos; still audit-friendly to do full upgrades.
+    - name: Debian/Ubuntu - apply upgrades (security preferred, best-effort)
+      apt:
+        upgrade: "{{ 'safe' if patch_only_security else 'dist' }}"
+
