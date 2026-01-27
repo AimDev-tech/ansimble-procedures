@@ -1,0 +1,20 @@
+- name: Aggiornamento Remoto Windows
+  hosts: windows_servers
+  gather_facts: no
+  vars:
+    ansible_connection: winrm
+    ansible_winrm_transport: basic
+    ansible_winrm_server_cert_validation: ignore
+
+  tasks:
+    - name: Cerca e installa aggiornamenti critici e di sicurezza
+      ansible.windows.win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+        state: installed
+      register: update_result
+
+    - name: Riavvia se necessario
+      ansible.windows.win_reboot:
+        when: update_result.reboot_required
