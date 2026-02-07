@@ -1,1 +1,63 @@
+---
+- name: Ban an IP on target host
+  hosts: remediation_targets
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Fail if ip_to_ban is missing
+      ansible.builtin.assert:
+        that:
+          - ip_to_ban is defined
+          - ip_to_ban | length > 0
+        fail_msg: "ip_to_ban is required (e.g. -e ip_to_ban=1.2.3.4)"
+
+    - name: Optional: show inputs
+      ansible.builtin.debug:
+        msg:
+          - "Target (inventory): {{ inventory_hostname }} / {{ ansible_host | default('n/a') }}"
+          - "IP to ban: {{ ip_to_ban }}"
+
+  tasks:
+    # Opzione A: UFW (se presente)
+    - name: Check if ufw exists
+      ansible.builtin.command: "which ufw"
+      register: ufw_check
+      changed_when: false
+      failed_when: false
+
+    - name: Ban IP using UFW (if installed)
+      ansible.builtin.command: "ufw deny from {{ ip_to_ban }} to any"
+      when: ufw_check.rc == 0
+      register: ufw_rule
+      changed_when: "'Skipping' not in ufw_rule.stdout"
+      failed_when: false
+
+    # Opzione B: iptables (fallback)
+    - name: Ban IP using iptables (fallback if ufw not installed)
+      ansible.builtin.iptables:
+        chain: INPUT
+        source: "{{ ip_to_ban }}"
+        jump: DROP
+        comment: "Wazuh ban {{ ip_to_ban }}"
+        state: present
+      when: ufw_check.rc != 0
+
+    # Persistenza regole (varia per distro)
+    - name: Install iptables-persistent (Debian/Ubuntu) if ufw not installed
+      ansible.builtin.apt:
+        name: iptables-persistent
+        state: present
+        update_cache: true
+      when:
+        - ufw_check.rc != 0
+        - ansible_facts.os_family == "Debian"
+
+    - name: Save iptables rules (Debian/Ubuntu) if ufw not installed
+      ansible.builtin.command: netfilter-persistent save
+      when:
+        - ufw_check.rc != 0
+        - ansible_facts.os_family == "Debian"
+      changed_when: true
+      failed_when: false
 
