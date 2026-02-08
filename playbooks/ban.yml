@@ -1,6 +1,6 @@
 ---
 - name: "Sicurezza Attiva: Ban IP Malizioso"
-  hosts: "{{ target_ip }}"
+  hosts: "{{ target_ip | default('all') }}"
   become: yes
 
   tasks:
