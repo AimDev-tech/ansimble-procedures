@@ -1,26 +1,27 @@
 ---
 - name: "Sicurezza Attiva: Ban IP Malizioso"
-  hosts: all
+  hosts: "{{ target_host }}"
   become: yes
-  vars:
-    # Questa variabile verrà sovrascritta dallo script di Wazuh
-    target_ip: "0.0.0.0"
 
   tasks:
-    - name: "Verifica che l'IP sia valido e non nullo"
-      fail:
-        msg: "Nessun IP fornito o IP non valido."
-      when: target_ip == "0.0.0.0" or target_ip == ""
+    - name: "Registra l'azione nel log di sistema locale"
+      syslogger:
+        msg: "WAZUH-ACTIVE-RESPONSE: Bannato IP {{ attacker_ip }} su richiesta del Manager"
+        priority: "err"
+        facility: "auth"
 
-    - name: "Aggiungi regola di DROP per l'IP malizioso"
+    - name: "Crea una entry in un file di log dedicato"
+      lineinfile:
+        path: /var/log/wazuh_bans.log
+        line: "{{ ansible_date_time.iso8601 }} - BANNATO IP: {{ attacker_ip }} - Host: {{ inventory_hostname }}"
+        create: yes
+        owner: root
+        group: root
+        mode: '0640'
+
+    - name: "Esegui il ban con iptables"
       iptables:
         chain: INPUT
-        source: "{{ target_ip }}"
+        source: "{{ attacker_ip }}"
         jump: DROP
-        comment: "Bannato da Wazuh Active Response"
-      register: iptables_result
-
-    - name: "Conferma del ban"
-      debug:
-        msg: "L'IP {{ target_ip }} è stato rimosso dalla rete."
-      when: iptables_result.changed
+        comment: "Bannato da Wazuh"
