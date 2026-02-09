@@ -1,4 +1,7 @@
 ---
+- name: Debug all variables
+  debug:
+    var: vars
 - name: "Sicurezza Attiva: Ban IP Malizioso"
   hosts: "{{ target_ip | default('all') }}"
   become: yes
