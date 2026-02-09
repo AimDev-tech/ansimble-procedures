@@ -6,7 +6,7 @@
   tasks:
     - name: Debug all variables
       debug:
-      var: vars
+        var: vars
     - name: "Registra l'azione nel log di sistema locale"
       syslogger:
         msg: "WAZUH-ACTIVE-RESPONSE: Bannato IP {{ attacker_ip }} su richiesta del Manager"
