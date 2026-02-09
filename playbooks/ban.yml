@@ -4,8 +4,6 @@
   become: yes
 
   tasks:
-    - debug:
-      var: attacker_ip
     - name: "Registra l'azione nel log di sistema locale"
       syslogger:
         msg: "WAZUH-ACTIVE-RESPONSE: Bannato IP {{ attacker_ip }} su richiesta del Manager"
