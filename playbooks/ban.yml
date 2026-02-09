@@ -1,12 +1,12 @@
 ---
-- name: Debug all variables
-  debug:
-    var: vars
 - name: "Sicurezza Attiva: Ban IP Malizioso"
   hosts: "{{ target_ip | default('all') }}"
   become: yes
 
   tasks:
+  - name: Debug all variables
+  debug:
+    var: vars
     - name: "Registra l'azione nel log di sistema locale"
       syslogger:
         msg: "WAZUH-ACTIVE-RESPONSE: Bannato IP {{ attacker_ip }} su richiesta del Manager"
