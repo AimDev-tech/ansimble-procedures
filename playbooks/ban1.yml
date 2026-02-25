@@ -1,1 +1,22 @@
+- name: Block attacker IP via UFW
+  hosts: all
+  become: true
+  vars:
+    attacker_ip: "{{ attacker_ip }}"
+  tasks:
+    - name: Ensure ufw installed
+      apt:
+        name: ufw
+        state: present
+        update_cache: true
 
+    - name: Deny attacker IP (all ports)
+      command: "ufw insert 1 deny from {{ attacker_ip }} to any"
+      register: ufw_out
+      changed_when: "'Skipping' not in ufw_out.stdout"
+      failed_when: false
+
+    - name: Reload ufw
+      command: ufw reload
+      changed_when: false
+      failed_when: false
