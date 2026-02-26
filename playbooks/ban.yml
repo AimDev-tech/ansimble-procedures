@@ -57,11 +57,6 @@
 
     - name: Create directory
       command: mkdir -p /tmp/semaphore/logs
-
-    - name: Verify directory exists
-      stat:
-        path: /tmp/semaphore/logs
-      register: dir_check
       
     #- name: show directory
     #  debug:
