@@ -48,7 +48,7 @@
    
     - name: Crea una entry in un file di log dedicato
       lineinfile:
-        path: /etc/semaphore/wazuh_bans.log
+        path: /tmp/semaphore/wazuh_bans.log
         line: "{{ ansible_date_time.iso8601 }} - BANNATO IP: {{ attacker_ip }} - Host: {{ inventory_hostname }}"
         create: yes
         owner: root
