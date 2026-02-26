@@ -2,26 +2,68 @@
 - name: "Sicurezza Attiva: Ban IP Malizioso"
   hosts: "{{ target_ip | default('all') }}"
   become: yes
-
+  vars:
+    attacker_ip: "{{ attacker_ip }}"
+    block_chain: "WAZUH_BLOCK"
   tasks:
-    - name: "Registra l'azione nel log di sistema locale"
-      syslogger:
-        msg: "WAZUH-ACTIVE-RESPONSE: Bannato IP {{ attacker_ip }} su richiesta del Manager"
-        priority: "err"
-        facility: "auth"
+    - name: Ensure iptables is installed
+      apt:
+        name: iptables
+        state: present
+        update_cache: true
+    # 1) Crea chain dedicata (se non esiste)
+    - name: Create chain {{ block_chain }} if missing
+      command: "iptables -N {{ block_chain }}"
+      register: new_chain
+      failed_when: false
+      changed_when: new_chain.rc == 0
+    # 2) Assicura che INPUT salti nella chain dedicata (in cima)
+    - name: Ensure INPUT jumps to {{ block_chain }} (insert at top if missing)
+      shell: |
+        iptables -C INPUT -j {{ block_chain }} 2>/dev/null || iptables -I INPUT 1 -j {{ block_chain }}
+      args:
+        executable: /bin/bash
+     # 3) Aggiunge la regola di DROP per l'IP (solo se non presente)
+    - name: Drop traffic from attacker IP in {{ block_chain }}
+      shell: |
+        iptables -C {{ block_chain }} -s {{ attacker_ip }} -j DROP 2>/dev/null || \
+        iptables -I {{ block_chain }} 1 -s {{ attacker_ip }} -j DROP
+      args:
+        executable: /bin/bash
 
-    - name: "Crea una entry in un file di log dedicato"
-      lineinfile:
-        path: /var/log/wazuh_bans.log
-        line: "{{ ansible_date_time.iso8601 }} - BANNATO IP: {{ attacker_ip }} - Host: {{ inventory_hostname }}"
-        create: yes
-        owner: root
-        group: root
-        mode: '0640'
+    # 4) Persistenza su Ubuntu: iptables-persistent / netfilter-persistent
+    - name: Install iptables-persistent for rule persistence
+      apt:
+        name: iptables-persistent
+        state: present
+        update_cache: true
 
-    - name: "Esegui il ban con iptables"
-      iptables:
-        chain: INPUT
-        source: "{{ attacker_ip }}"
-        jump: DROP
-        comment: "Bannato da Wazuh"
+    - name: Save iptables rules
+      command: netfilter-persistent save
+      changed_when: false
+
+    - name: Reload persistent rules
+      command: netfilter-persistent reload
+      changed_when: false
+   
+    #- name: "Registra l'azione nel log di sistema locale"
+    #  syslogger:
+    #    msg: "WAZUH-ACTIVE-RESPONSE: Bannato IP {{ attacker_ip }} su richiesta del Manager"
+    #    priority: "err"
+    #    facility: "auth"
+
+    #- name: "Crea una entry in un file di log dedicato"
+    #  lineinfile:
+    #    path: /var/log/wazuh_bans.log
+    #    line: "{{ ansible_date_time.iso8601 }} - BANNATO IP: {{ attacker_ip }} - Host: {{ inventory_hostname }}"
+    #    create: yes
+    #    owner: root
+    #    group: root
+    #    mode: '0640'
+
+    #- name: "Esegui il ban con iptables"
+    #  iptables:
+    #    chain: INPUT
+    #    source: "{{ attacker_ip }}"
+    #    jump: DROP
+    #    comment: "Bannato da Wazuh"
