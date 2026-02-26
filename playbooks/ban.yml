@@ -23,7 +23,7 @@
         iptables -C INPUT -j {{ block_chain }} 2>/dev/null || iptables -I INPUT 1 -j {{ block_chain }}
       args:
         executable: /bin/bash
-     # 3) Aggiunge la regola di DROP per l'IP (solo se non presente)
+    # 3) Aggiunge la regola di DROP per l'IP (solo se non presente)
     - name: Drop traffic from attacker IP in {{ block_chain }}
       shell: |
         iptables -C {{ block_chain }} -s {{ attacker_ip }} -j DROP 2>/dev/null || \
@@ -45,10 +45,19 @@
     - name: Reload persistent rules
       command: netfilter-persistent reload
       changed_when: false
+
+    - name: Ensure security log directory exists
+      file:
+        path: /tmp/semaphore/logs
+        state: directory
+        owner: root
+        group: adm
+        mode: "0750"
+
    
     - name: Crea una entry in un file di log dedicato
       lineinfile:
-        path: /tmp/semaphore/wazuh_bans.log
+        path: /tmp/semaphore/logs/wazuh_bans.log
         line: "{{ ansible_date_time.iso8601 }} - BANNATO IP: {{ attacker_ip }} - Host: {{ inventory_hostname }}"
         create: yes
         owner: root
