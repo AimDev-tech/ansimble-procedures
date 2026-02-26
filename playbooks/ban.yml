@@ -62,10 +62,9 @@
       stat:
         path: /tmp/semaphore/logs
       register: dir_check
-
-    - debug:
-      var: dir_check
-   
+      
+    - debug
+        var: dir_check  
     #- name: Crea una entry in un file di log dedicato
     #  lineinfile:
     #    path: /tmp/semaphore/logs/wazuh_bans.log
