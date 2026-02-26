@@ -47,7 +47,7 @@
       changed_when: false
 
     - name: Ensure security log directory exists
-      command: mkdir -p /tmp/semaphore/logs
+      command: mkdir -p /var/log/semaphore
       #file:
       #  path: /tmp/semaphore/logs
       #  state: directory
