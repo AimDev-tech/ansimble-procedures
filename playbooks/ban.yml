@@ -47,12 +47,13 @@
       changed_when: false
 
     - name: Ensure security log directory exists
-      file:
-        path: /tmp/semaphore/logs
-        state: directory
-        owner: root
-        group: adm
-        mode: "0750"
+      command: mkdir -p /tmp/semaphore/logs
+      #file:
+      #  path: /tmp/semaphore/logs
+      #  state: directory
+      #  owner: root
+      #  group: adm
+      #  mode: "0750"
 
    
     - name: Crea una entry in un file di log dedicato
