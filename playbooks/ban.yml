@@ -55,12 +55,6 @@
       #  group: adm
       #  mode: "0750"
 
-    - name: Create directory
-      command: mkdir -p /tmp/semaphore/logs
-      
-    #- name: show directory
-    #  debug:
-    #    msg: "Direcoty creata {{dir_check}}"
     - name: Crea una entry in un file di log dedicato
       hosts: localhost
       connection: local
