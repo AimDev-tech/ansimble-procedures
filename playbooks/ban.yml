@@ -55,15 +55,25 @@
       #  group: adm
       #  mode: "0750"
 
+    - name: Create directory
+      command: mkdir -p /tmp/semaphore/logs
+
+    - name: Verify directory exists
+      stat:
+        path: /tmp/semaphore/logs
+      register: dir_check
+
+    - debug:
+      var: dir_check
    
-    - name: Crea una entry in un file di log dedicato
-      lineinfile:
-        path: /tmp/semaphore/logs/wazuh_bans.log
-        line: "{{ ansible_date_time.iso8601 }} - BANNATO IP: {{ attacker_ip }} - Host: {{ inventory_hostname }}"
-        create: yes
-        owner: root
-        group: root
-        mode: '0640'
+    #- name: Crea una entry in un file di log dedicato
+    #  lineinfile:
+    #    path: /tmp/semaphore/logs/wazuh_bans.log
+    #    line: "{{ ansible_date_time.iso8601 }} - BANNATO IP: {{ attacker_ip }} - Host: {{ inventory_hostname }}"
+    #    create: yes
+    #    owner: root
+    #    group: root
+    #    mode: '0640'
 
     #- name: "Esegui il ban con iptables"
     #  iptables:
