@@ -56,7 +56,9 @@
       #  mode: "0750"
 
     - name: Crea una entry in un file di log dedicato
-      #hosts: localhost
+      become: true
+      delegate_to: localhost
+      run_once: false
       #connection: local
       #become: true
       lineinfile:
