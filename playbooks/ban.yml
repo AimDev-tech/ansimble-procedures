@@ -45,7 +45,30 @@
     - name: Reload persistent rules
       command: netfilter-persistent reload
       changed_when: false
-   
+    - name: Ensure security log directory exists
+      file:
+        path: /var/log/security
+        state: directory
+        owner: root
+        group: adm
+        mode: "0750"
+
+    - name: Write ISO27001 evidence log (JSONL)
+      lineinfile:
+      path: /var/log/security/auto-remediation.log
+      line: >-
+        {"ts":"{{ ansible_date_time.iso8601 }}",
+         "correlation_id":"{{ correlation_id | default('n/a') }}",
+         "action":"iptables_block",
+         "chain":"{{ block_chain | default('WAZUH_BLOCK') }}",
+         "attacker_ip":"{{ attacker_ip }}",
+         "source":"wazuh->semaphore->ansible",
+         "host":"{{ inventory_hostname }}",
+         "result":"applied"}
+       create: yes
+       owner: root
+       group: adm
+       mode: "0640"
     #- name: "Registra l'azione nel log di sistema locale"
     #  syslogger:
     #    msg: "WAZUH-ACTIVE-RESPONSE: Bannato IP {{ attacker_ip }} su richiesta del Manager"
