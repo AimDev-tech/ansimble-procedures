@@ -65,8 +65,8 @@
         path: /tmp/semaphore/logs/wazuh_bans.log
         line: "{{ ansible_date_time.iso8601 }} - BANNATO IP: {{ attacker_ip }} - Host: {{ inventory_hostname }}"
         create: yes
-        owner: root
-        group: root
+       # owner: root
+       # group: root
         mode: '0640'
 
     #- name: "Esegui il ban con iptables"
