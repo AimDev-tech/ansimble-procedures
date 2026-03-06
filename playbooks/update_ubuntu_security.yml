@@ -15,6 +15,11 @@
       apt:
         upgrade: safe
         default_release: "{{ ansible_distribution_release }}-security"
+        
+    - name: Aggiorna solo security updates
+      apt:
+        name: unattended-upgrades
+        state: present
 
     - name: Pulizia pacchetti non necessari
       apt:
