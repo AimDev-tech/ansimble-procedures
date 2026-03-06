@@ -1,6 +1,6 @@
 ---
 - name: Aggiornamento pacchetti di sicurezza Ubuntu
-  hosts: all
+  hosts: ubuntu_servers
   become: true
   gather_facts: true
 
