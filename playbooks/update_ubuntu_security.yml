@@ -1,0 +1,31 @@
+---
+- name: Aggiornamento pacchetti di sicurezza Ubuntu
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    - name: Aggiorna cache apt
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Installa aggiornamenti di sicurezza
+      apt:
+        upgrade: safe
+        default_release: "{{ ansible_distribution_release }}-security"
+
+    - name: Pulizia pacchetti non necessari
+      apt:
+        autoremove: yes
+
+    - name: Verifica se è richiesto reboot
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Mostra se è necessario riavviare il server
+      debug:
+        msg: "⚠️ Reboot richiesto"
+      when: reboot_required.stat.exists
